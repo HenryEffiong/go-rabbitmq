@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -21,26 +22,8 @@ func consumeAMQP() {
 	failOnError(err, "Failed to open a channel")
 	defer ch.Close()
 
-	err = ch.ExchangeDeclare(
-		"logs",   // name
-		"fanout", // type
-		true,     // durable
-		false,    // auto-deleted
-		false,    // internal
-		false,    // no-wait
-		nil,      // arguments
-	)
-	failOnError(err, "Failed to declare an exchange")
-
 	// To receive, we must declare the queue from which we're going to consume
 	q, err := ch.QueueDeclare(
-		// "task-queue-2", // name
-		// true,           // durable
-		// false,          // delete when unused
-		// false,          // exclusive
-		// false,          // no-wait
-		// nil,            // arguments
-
 		"",    // name
 		false, // durable
 		false, // delete when unused
@@ -50,42 +33,32 @@ func consumeAMQP() {
 	)
 	failOnError(err, "Failed to declare a queue")
 
+	if len(os.Args) < 2 {
+		log.Printf("Usage: %s [info] [warning] [error]", os.Args[0])
+		os.Exit(0)
+	}
+
 	// Bind the queue with an exchange
-	err = ch.QueueBind(
-		q.Name, // queue name
-		"",     // routing key
-		"logs", // exchange
-		false,
-		nil,
-	)
+	for _, s := range os.Args[1:] {
+		log.Printf("Binding queue %s to exchange %s with routing key %s",
+			q.Name, "logs_direct", s)
+		err = ch.QueueBind(
+			q.Name,        // queue name
+			s,             // routing key
+			"logs_direct", // exchange
+			false,
+			nil)
+		failOnError(err, "Failed to bind a queue")
+	}
 	failOnError(err, "Failed to bind a queue")
-
-	// set the prefetch count
-	// err = ch.Qos(
-	// 	1,     // prefetch count
-	// 	0,     // prefetch size
-	// 	false, // global
-	// )
-	// failOnError(err, "Failed to set QoS")
-
-	// msgs, err := ch.Consume(
-	// 	q.Name, // queue
-	// 	"",     // consumer
-	// 	true,   // auto-ack
-	// 	false,  // exclusive
-	// 	false,  // no-local
-	// 	false,  // no-wait
-	// 	nil,    // args
-	// )
-	// failOnError(err, "Failed to register a consumer")
 
 	msgs, err := ch.Consume(
 		q.Name, // queue
 		"",     // consumer
-		true,   // auto-ack
+		true,   // auto ack
 		false,  // exclusive
-		false,  // no-local
-		false,  // no-wait
+		false,  // no local
+		false,  // no wait
 		nil,    // args
 	)
 	failOnError(err, "Failed to register a consumer")
