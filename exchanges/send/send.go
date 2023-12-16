@@ -25,13 +25,13 @@ func main() {
 
 	// Create an exchange
 	err = ch.ExchangeDeclare(
-		"logs_direct", // name
-		"direct",      // type
-		true,          // durable
-		false,         // auto-deleted
-		false,         // internal
-		false,         // no-wait
-		nil,           // arguments
+		"logs_topic", // name
+		"topic",      // type
+		true,         // durable
+		false,        // auto-deleted
+		false,        // internal
+		false,        // no-wait
+		nil,
 	)
 	failOnError(err, "Failed to declare an exchange")
 
@@ -52,12 +52,11 @@ func main() {
 	// publish a message to the queue
 	body := bodyFrom(os.Args)
 	err = ch.PublishWithContext(ctx,
-		"logs_direct",         // exchange
+		"logs_topic",          // exchange
 		severityFrom(os.Args), // routing key
 		false,                 // mandatory
 		false,                 // immediate
 		amqp.Publishing{
-			// DeliveryMode: amqp.Persistent,
 			ContentType: "text/plain",
 			Body:        []byte(body),
 		})
